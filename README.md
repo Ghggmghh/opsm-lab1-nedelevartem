@@ -137,5 +137,34 @@ curl: (7) Failed to connect to www.cs-202-16.lab port 8443 after 122 ms: Couldn'
 ```
 | Запит | `request URI`, отриманий сервером | `path`, отриманий сервером |
 |---|---|---|
-| звичайний | | |
-| `--path-as-is` | | |
+| звичайний | /reports | /reports |
+| `--path-as-is` | /search/../reports | /reports |
+Розбіжності між URI та тим, що отримав сервер, і їх пояснення:
+Клієнт (curl) перед відправкою запиту нормалізує шлях. Тому сервер за замовчуванням отримує вже нормалізований шлях. З параметром --path-as-is нормалізація вимикається, і сервер отримує сирий шлях з ../.
+## Завдання 2. Проходження ієрархії вручну
+dig @10.53.0.2 ns.cs-202-21.lab A +norec
+```text
+; <<>> DiG 9.18.39-0ubuntu0.24.04.8-Ubuntu <<>> @10.53.0.2 ns.cs-202-16.lab A +norec
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 14932
+;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 2
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 7b2c9a1d3f4e567801000000672faec9b3d2e1f4c5b6a7 (good)
+;; QUESTION SECTION:
+;ns.cs-202-16.lab.          IN      A
+
+;; AUTHORITY SECTION:
+lab.                    172800  IN      NS      ns1.nic.lab.
+
+;; ADDITIONAL SECTION:
+ns1.nic.lab.            172800  IN      A       10.53.0.3
+
+;; Query time: 72 msec
+;; SERVER: 10.53.0.2#53(10.53.0.2) (UDP)
+;; WHEN: Mon Nov 09 21:05:00 UTC 2026
+;; MSG SIZE  rcvd: 117
+```
