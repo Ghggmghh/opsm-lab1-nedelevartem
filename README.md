@@ -22,3 +22,23 @@
 | Пріоритет MX | 50 |
 | Токен TXT | 2b830ea6 |
 | Ім'я для завдання 5 | new-hagpz |
+## Завдання 1. Складові URI
+
+### 1.1. Розбір
+
+
+| № | scheme | userinfo | host | port | path | query | fragment |
+|---|---|---|---|---|---|---|---|
+| 1 | http | - | www.cs-202-16.lab | 80 | /search/reports | page=93&sort=uk | section-2 |
+| 2 |  http | - | news.cs-202-16.lab | 80 | /reports/ | page=%D0%BA%D0%B8%D1%97%D0%B2 | - |
+| 3 |  http | user:pass | user:pass@test.cs-202-16.lab | 80 | /search | - | results |
+| 4 |  https | - | www.cs-202-16.lab | 8443 | /search/../reports | - | - |
+| 5 | mailto | - | - | - | admin@cs-202-16.lab | subject=search | - |
+
+| № | Ім'я, що запитується в DNS | Заголовок `Host` | Ціль запиту (request target) |
+|---|---|---|---|
+| 1 | | | |
+| 2 | | | |
+| 3 | | | |
+| 4 | | | |
+| 5 | | | |
