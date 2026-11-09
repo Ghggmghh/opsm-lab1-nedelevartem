@@ -37,8 +37,18 @@
 
 | № | Ім'я, що запитується в DNS | Заголовок `Host` | Ціль запиту (request target) |
 |---|---|---|---|
-| 1 | | | |
-| 2 | | | |
-| 3 | | | |
-| 4 | | | |
-| 5 | | | |
+| 1 | www.cs-202-16.lab | www.cs-202-16.lab | /search/reports?page=93&sort=uk#section-2 |
+| 2 | news.cs-202-16.lab | news.cs-202-16.lab | /reports/?page=%D0%BA%D0%B8%D1%97%D0%B2 |
+| 3 | test.cs-202-16.lab | test.cs-202-16.lab | /search#results |
+| 4 | www.cs-202-16.lab | www.cs-202-16.lab | /search/../reports |
+| 5 | - | - | - |
+
+Декодоване значення параметра URI 2:
+
+Чому URI 5 не має складової host, хоча містить символ `@`:
+
+### 1.2. Перевірка (після завдання 3)
+
+```text
+curl -v`http://www.cs-202-16.lab/search/reports?page=93&sort=uk#section-2`
+```
