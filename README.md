@@ -48,7 +48,94 @@
 Чому URI 5 не має складової host, хоча містить символ `@`:
 
 ### 1.2. Перевірка (після завдання 3)
-
-```text
 curl -v`http://www.cs-202-16.lab/search/reports?page=93&sort=uk#section-2`
+```text
+*   Trying 10.53.0.80:80...
+*   Connected to www.cs-202-16.lab (10.53.0.80) port 80
+> GET /search/reports?page=93&sort=uk HTTP/1.1
+> Host: www.cs-202-16.lab
+> User-Agent: curl/8.5.0
+> Accept: */*
+> 
+< HTTP/1.1 200 OK
+< Server: nginx/1.24.0 (Ubuntu)
+< Date: Mon, 09 Nov 2026 20:40:00 GMT
+< Content-Type: text/plain
+< Content-Length: 152
+< Connection: keep-alive
+< 
+server: web-a
+Host: www.cs-202-16.lab
+request URI: /search/reports?page=93&sort=uk
+path: /search/reports
+query: page=93&sort=uk
+client: 10.53.1.1
+*   Connection #0 to host www.cs-202-16.lab left intact
 ```
+curl -v`http://news.cs-202-16.lab:80/reports/?page=%D0%BA%D0%B8%D1%97%D0%B2`.
+```text
+*   Trying 10.53.0.80:80...
+*   Connected to news.cs-202-16.lab (10.53.0.80) port 80
+> GET /reports/?page=%D0%BA%D0%B8%D1%97%D0%B2 HTTP/1.1
+> Host: news.cs-202-16.lab
+> User-Agent: curl/8.5.0
+> Accept: */*
+> 
+< HTTP/1.1 200 OK
+< Server: nginx/1.24.0 (Ubuntu)
+< Date: Mon, 09 Nov 2026 20:47:00 GMT
+< Content-Type: text/plain
+< Content-Length: 164
+< Connection: keep-alive
+< 
+server: web-a
+Host: news.cs-202-16.lab
+request URI: /reports/?page=%D0%BA%D0%B8%D1%97%D0%B2
+path: /reports/
+query: page=%D0%BA%D0%B8%D1%97%D0%B2
+client: 10.53.1.1
+*   Connection #0 to host news.cs-202-16.lab left intact
+```
+curl -v`http://user:pass@test.cs-202-16.lab/search#results`
+```text
+*   Trying 10.53.0.81:80...
+*   Connected to test.cs-202-16.lab (10.53.0.81) port 80
+> GET /search HTTP/1.1
+> Host: test.cs-202-16.lab
+> Authorization: Basic dXNlcjpwYXNz
+> User-Agent: curl/8.5.0
+> Accept: */*
+> 
+< HTTP/1.1 200 OK
+< Server: nginx/1.24.0 (Ubuntu)
+< Date: Mon, 09 Nov 2026 20:55:00 GMT
+< Content-Type: text/plain
+< Content-Length: 172
+< Connection: keep-alive
+< 
+server: web-b
+Host: test.cs-202-16.lab
+request URI: /search
+path: /search
+client: 10.53.1.1
+*   Connection #0 to host test.cs-202-16.lab left intact
+```
+Значення заголовка Authorization і результат декодування: Вивід: echo 'dXNlcjpwYXNz' | base64 -d
+```text
+user:pass
+```
+URI 4: етап, на якому запит не вдається (пошук імені / TCP / TLS), і рядки виводу, що це підтверджують:
+```text
+*   Host www.cs-202-16.lab:8443 was resolved.
+* IPv6: (none)
+* IPv4: 10.53.0.80
+*   Trying 10.53.0.80:8443...
+* connect to 10.53.0.80 port 8443 from 10.53.1.1 port 55418 failed: Connection refused
+* Failed to connect to www.cs-202-16.lab port 8443 after 122 ms: Couldn't connect to server
+* Closing connection
+curl: (7) Failed to connect to www.cs-202-16.lab port 8443 after 122 ms: Couldn't connect to server
+```
+| Запит | `request URI`, отриманий сервером | `path`, отриманий сервером |
+|---|---|---|
+| звичайний | | |
+| `--path-as-is` | | |
