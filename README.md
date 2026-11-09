@@ -168,3 +168,94 @@ ns1.nic.lab.            172800  IN      A       10.53.0.3
 ;; WHEN: Mon Nov 09 21:05:00 UTC 2026
 ;; MSG SIZE  rcvd: 117
 ```
+dig @10.53.0.3 ns.cs-202-21.lab A +norec
+```text
+; <<>> DiG 9.18.39-0ubuntu0.24.04.8-Ubuntu <<>> @10.53.0.3 ns.cs-202-16.lab A +norec
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 43750
+;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 2
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 83ea0aea9b35d19f010000006adfaab305c1ebe48998d59a (good)
+;; QUESTION SECTION:
+;ns.cs-202-16.lab.              IN      A
+
+;; AUTHORITY SECTION:
+cs-202-16.lab.          3600    IN      NS      ns.cs-202-16.lab.
+
+;; ADDITIONAL SECTION:
+ns.cs-202-16.lab.       3600    IN      A       10.53.1.1
+
+;; Query time: 80 msec
+;; SERVER: 10.53.0.3#53(10.53.0.3) (UDP)
+;; WHEN: Mon Nov 09 21:08:00 UTC 2026
+;; MSG SIZE  rcvd: 103
+```
+dig @10.53.1.1 ns.cs-202-21.lab A +norec
+```text
+; <<>> DiG 9.18.39-0ubuntu0.24.04.8-Ubuntu <<>> @10.53.1.1 ns.cs-202-16.lab A +norec
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 14513
+;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 39f6d38c573e5146010000006adfaab3df4eeccfa3b55e57 (good)
+;; QUESTION SECTION:
+;ns.cs-202-16.lab.              IN      A
+
+;; ANSWER SECTION:
+ns.cs-202-16.lab.       30      IN      A       10.53.1.1
+
+;; AUTHORITY SECTION:
+cs-202-16.lab.          30      IN      NS      ns.cs-202-16.lab.
+
+;; Query time: 0 msec
+;; SERVER: 10.53.1.1#53(10.53.1.1) (UDP)
+;; WHEN: Mon Nov 09 21:12:00 UTC 2026
+;; MSG SIZE  rcvd: 103
+```
+| Сервер | status | flags | ANSWER | AUTHORITY | ADDITIONAL |
+|---|---|---|---|---|---|
+| 10.53.0.2 | NOERROR | qr | 0 | lab.                    172800  IN      NS      ns1.nic.lab. | ns1.nic.lab.            172800  IN      A       10.53.0.3 |
+| 10.53.0.3 | NOERROR | qr | 0 | cs-202-16.lab.          3600    IN      NS      ns.cs-202-16.lab. | ns.cs-202-16.lab.       3600    IN      A       10.53.1.1 |
+| 10.53.1.1 | NOERROR | qr aa | ns.cs-202-16.lab.       30      IN      A       10.53.1.1 | cs-202-16.lab.          30      IN      NS      ns.cs-202-16.lab. | - |
+dig ns.sNN.lab A +trace
+```text
+; <<>> DiG 9.18.39-0ubuntu0.24.04.8-Ubuntu <<>> ns.cs-202-16.lab A +trace
+;; global options: +cmd
+.                       82330   IN      NS      a.root-servers.net.
+;; Received 59 bytes from 10.53.0.53#53(10.53.0.53) in 1 ms
+
+lab.                    172800  IN      NS      ns1.nic.lab.
+;; Received 117 bytes from 10.53.0.2#53(a.root-servers.net) in 78 ms
+
+cs-202-16.lab.          3600    IN      NS      ns.cs-202-16.lab.
+;; Received 103 bytes from 10.53.0.3#53(ns1.nic.lab) in 45 ms
+
+ns.cs-202-16.lab.       30      IN      A       10.53.1.1
+cs-202-16.lab.          30      IN      NS      ns.cs-202-16.lab.
+;; Received 103 bytes from 10.53.1.1#53(ns.cs-202-16.lab) in 0 ms
+```
+| Запит | TTL запису NS | Прапорець `aa` | Секція, у якій міститься NS |
+|---|---|---|---|
+| `dig @10.53.0.3 sNN.lab NS +norec` | 3600 | -qr | cs-202-16.lab. 3600 IN NS ns.cs-202-16.lab. |
+| `dig @10.53.1.1 sNN.lab NS +norec` | 30 | qr aa | cs-202-16.lab. 30 IN NS ns.cs-202-16.lab. |
+1. Які відповіді є відсиланнями і за якими ознаками це визначено?
+Відповіді від 10.53.0.2 (root) та 10.53.0.3 (TLD) є відсиланнями (referral). Ознаки: відсутність прапорця aa (сервер не є авторитативним), секція ANSWER порожня, але присутні записи NS у секції AUTHORITY (хто є авторитативним) та IP-адреси цих серверів у секції ADDITIONAL.
+2. Для чого у відповіді TLD присутній запис у секції ADDITIONAL і що сталося б, якби його не було?
+Цей запис (Glue record) містить IP-адресу DNS-сервера зони. Оскільки ім'я сервера лежить у тій самій зоні, яку він обслуговує, без Glue-запису виникло б замкнене коло: щоб дізнатися IP-адресу сервера, резолверу довелося б запитати сам цей сервер. Резолвінг був би неможливий.
+3. Яка з двох копій запису NS є авторитативною і чому?
+Авторитативною є копія на сервері 10.53.1.1. Копія на сервері TLD 10.53.0.3 є лише вказівником для делегування.
+## Завдання 3. Заповнення власної зони
+zone-reload
+```text
+zone cs-202-16.lab/IN: loaded serial 2026110901
+OK
+zone reload queued
+```
