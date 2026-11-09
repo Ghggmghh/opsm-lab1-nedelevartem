@@ -259,3 +259,155 @@ zone cs-202-16.lab/IN: loaded serial 2026110901
 OK
 zone reload queued
 ```
+| Запис | status | Прапорець `aa` | Значення в ANSWER | TTL | Відповідає картці (так/ні) |
+|---|---|---|---|---|---|
+| `www` A | NOERROR | qr aa | `10.53.0.80` | 30 | так |
+| псевдонім CNAME | NOERROR | qr aa | `www.cs-202-16.lab.` | 30 | так |
+| `mail` A | NOERROR | qr aa | `10.53.0.80` | 30 | так |
+| `@` MX | NOERROR | qr aa | `50 mail.cs-202-16.lab.` | 30 | так |
+| `@` TXT | NOERROR | qr aa | `"lab-token=2b830ea6"` | 30 | так |
+| другий хост A | NOERROR | qr aa | `10.53.0.81` | 25 | так |
+Порівняння відповідей резолвера та власного сервера:
+dig files.cs-202-17.lab
+```text
+dig news.cs-202-16.lab
+
+; <<>> DiG 9.18.39-0ubuntu0.24.04.8-Ubuntu <<>> news.cs-202-16.lab
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 10476
+;; flags: qr rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;news.cs-202-16.lab.            IN      A
+
+;; ANSWER SECTION:
+news.cs-202-16.lab.     30      IN      CNAME   www.cs-202-16.lab.
+www.cs-202-16.lab.      30      IN      A       10.53.0.80
+
+;; Query time: 41 msec
+;; SERVER: 10.53.0.53#53(10.53.0.53) (UDP)
+;; WHEN: Mon Nov 09 23:55:47 UTC 2026
+;; MSG SIZE  rcvd: 81
+```
+dig @10.53.1.1 files.cs-202-21.lab +norec
+```text
+dig @10.53.1.1 news.cs-202-16.lab +norec
+
+; <<>> DiG 9.18.39-0ubuntu0.24.04.8-Ubuntu <<>> @10.53.1.1 news.cs-202-16.lab +norec
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 53719
+;; flags: qr aa; QUERY: 1, ANSWER: 2, AUTHORITY: 1, ADDITIONAL: 2
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: c02e2b20c4aa9e9d010000006adf46cbba4cfc9e88719c06 (good)
+;; QUESTION SECTION:
+;news.cs-202-16.lab.            IN      A
+
+;; ANSWER SECTION:
+news.cs-202-16.lab.     30      IN      CNAME   www.cs-202-16.lab.
+www.cs-202-16.lab.      30      IN      A       10.53.0.80
+
+;; AUTHORITY SECTION:
+cs-202-16.lab.          30      IN      NS      ns.cs-202-16.lab.
+
+;; ADDITIONAL SECTION:
+ns.cs-202-16.lab.       30      IN      A       10.53.1.1
+
+;; Query time: 3 msec
+;; SERVER: 10.53.1.1#53(10.53.1.1) (UDP)
+;; WHEN: Mon Nov 09 23:57:47 UTC 2026
+;; MSG SIZE  rcvd: 141
+```
+dig cs-202-21.lab MX
+```text
+; <<>> DiG 9.18.39-0ubuntu0.24.04.8-Ubuntu <<>> cs-202-16.lab MX
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 33660
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;cs-202-16.lab.                 IN      MX
+
+;; ANSWER SECTION:
+cs-202-16.lab.          30      IN      MX      50 mail.cs-202-16.lab.
+
+;; Query time: 1 msec
+;; SERVER: 10.53.0.53#53(10.53.0.53) (UDP)
+;; WHEN: Tue Nov 10 00:02:45 UTC 2026
+;; MSG SIZE  rcvd: 63
+```
+dig @10.53.1.1 cs-202-21.lab MX +norec
+```text
+; <<>> DiG 9.18.39-0ubuntu0.24.04.8-Ubuntu <<>> @10.53.1.1 cs-202-16.lab MX +norec
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 4868
+;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 3
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: c3a7e75c3edd48ab010000006adf48a4b54b123aecb16f6f (good)
+;; QUESTION SECTION:
+;cs-202-16.lab.                 IN      MX
+
+;; ANSWER SECTION:
+cs-202-16.lab.          30     IN      MX      50 mail.cs-202-16.lab.
+
+;; AUTHORITY SECTION:
+cs-202-16.lab.         30      IN      NS      ns.cs-202-16.lab.
+
+;; ADDITIONAL SECTION:
+mail.cs-202-16.lab.    30     IN      A       10.53.0.80
+ns.cs-202-16.lab.      30     IN      A       10.53.1.1
+
+;; Query time: 0 msec
+;; SERVER: 10.53.1.1#53(10.53.1.1) (UDP)
+;; WHEN: Tue Nov 10 00:15:40 UTC 2026
+;; MSG SIZE  rcvd: 140
+```
+| Запит | flags | ANSWER (кількість, типи) | AUTHORITY (кількість, типи) | ADDITIONAL (кількість, типи) | TTL |
+|---|---|---|---|---|---|
+| псевдонім через resolver-a | qr rd ra | 2(CNAME + A) | 0 | 0 | 30 |
+| псевдонім через 10.53.1.1 | qr aa | 2(CNAME + A) | 1(NS) | 1(A) | 30 |
+| MX через resolver-a | qr rd ra | 1 MX | 0 | 0 | 30 |
+| MX через 10.53.1.1 | qr aa | 1 MX | 1(NS) | 2(A) | 30 |
+Пояснення відмінностей:
+Авторитативний сервер (10.53.1.1) повертає прапорець aa і статичний TTL із файлу зони. Резолвер (resolver-a) не ставить прапорець aa і віддає запис із кешу з динамічним TTL. Крім того, на запит псевдоніма резолвер одразу рекурсивно шукає A-запис для цілі (тому в ANSWER 2 записи: CNAME і A), тоді як авторитативний сервер відповідає лише записом CNAME (1 запис в ANSWER).
+Повідомлення `zone-check` після тимчасового додавання `@ IN CNAME www`:
+
+```text
+dns_master_load: /lab/zone/cs-202-16.lab.zone:18: cs-202-16.lab: CNAME and other data
+zone cs-202-16.lab/IN: loading from master file /lab/zone/cs-202-16.lab.zone failed: CNAME and other data
+zone cs-202-16.lab/IN: not loaded due to errors.
+```
+1. Який TTL має кожен запис зони і звідки це значення взято?
+TTL береться з директиви $TTL на початку файлу зони, якщо він явно не вказаний у самому рядку запису.
+2. Скільки записів містить секція ANSWER у відповіді на запит псевдоніма і чому?
+2 записи. Перший — це сам CNAME-запис, другий — A-запис, на який вказує CNAME, знайдений резолвером під час рекурсії.
+3. Чому запис CNAME неможливо розмістити для імені @?
+Згідно з RFC, CNAME-запис не може співіснувати з жодними іншими записами для того самого імені. В імені @ (вершина зони) обов'язково знаходяться записи SOA та NS, тому розміщення там CNAME призводить до синтаксичної помилки зони.
+## Завдання 4. TTL і видимість змін
+
+Два запити з інтервалом 5 с:
+
+```text
+www.cs-202-16.lab.      30      IN      A       10.53.0.80
+www.cs-202-16.lab.      25      IN      A       10.53.0.80
+```
+Прогноз Формула: t = T_зміни + R, де R — залишок TTL у кеші на момент зміни. Найбільша можлива затримка — повний $TTL = 30 с.
+
+Перевірка, що сервер до zone-reload повертає стару адресу:
+```text
+root@ns-cs-202-21:/# dig @10.53.1.1 www.cs-202-21.lab +norec +short
+10.53.0.80
+```
