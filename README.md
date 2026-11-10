@@ -144,7 +144,7 @@ curl: (7) Failed to connect to www.cs-202-16.lab port 8443 after 122 ms: Couldn'
 
 Клієнт (curl) перед відправкою запиту нормалізує шлях. Тому сервер за замовчуванням отримує вже нормалізований шлях. З параметром --path-as-is нормалізація вимикається, і сервер отримує сирий шлях з ../.
 ## Завдання 2. Проходження ієрархії вручну
-dig @10.53.0.2 ns.cs-202-21.lab A +norec
+dig @10.53.0.2 ns.cs-202-16.lab A +norec
 ```text
 ; <<>> DiG 9.18.39-0ubuntu0.24.04.8-Ubuntu <<>> @10.53.0.2 ns.cs-202-16.lab A +norec
 ; (1 server found)
@@ -170,7 +170,7 @@ ns1.nic.lab.            172800  IN      A       10.53.0.3
 ;; WHEN: Mon Nov 09 21:05:00 UTC 2026
 ;; MSG SIZE  rcvd: 117
 ```
-dig @10.53.0.3 ns.cs-202-21.lab A +norec
+dig @10.53.0.3 ns.cs-202-16.lab A +norec
 ```text
 ; <<>> DiG 9.18.39-0ubuntu0.24.04.8-Ubuntu <<>> @10.53.0.3 ns.cs-202-16.lab A +norec
 ; (1 server found)
@@ -196,7 +196,7 @@ ns.cs-202-16.lab.       3600    IN      A       10.53.1.1
 ;; WHEN: Mon Nov 09 21:08:00 UTC 2026
 ;; MSG SIZE  rcvd: 103
 ```
-dig @10.53.1.1 ns.cs-202-21.lab A +norec
+dig @10.53.1.1 ns.cs-202-16.lab A +norec
 ```text
 ; <<>> DiG 9.18.39-0ubuntu0.24.04.8-Ubuntu <<>> @10.53.1.1 ns.cs-202-16.lab A +norec
 ; (1 server found)
@@ -274,7 +274,7 @@ zone reload queued
 | другий хост A | NOERROR | qr aa | `10.53.0.81` | 25 | так |
 
 Порівняння відповідей резолвера та власного сервера:
-dig files.cs-202-17.lab
+dig files.cs-202-16.lab
 ```text
 dig news.cs-202-16.lab
 
@@ -298,7 +298,7 @@ www.cs-202-16.lab.      30      IN      A       10.53.0.80
 ;; WHEN: Mon Nov 09 23:55:47 UTC 2026
 ;; MSG SIZE  rcvd: 81
 ```
-dig @10.53.1.1 files.cs-202-21.lab +norec
+dig @10.53.1.1 files.cs-202-16.lab +norec
 ```text
 dig @10.53.1.1 news.cs-202-16.lab +norec
 
@@ -330,7 +330,7 @@ ns.cs-202-16.lab.       30      IN      A       10.53.1.1
 ;; WHEN: Mon Nov 09 23:57:47 UTC 2026
 ;; MSG SIZE  rcvd: 141
 ```
-dig cs-202-21.lab MX
+dig cs-202-16.lab MX
 ```text
 ; <<>> DiG 9.18.39-0ubuntu0.24.04.8-Ubuntu <<>> cs-202-16.lab MX
 ;; global options: +cmd
@@ -415,6 +415,183 @@ www.cs-202-16.lab.      25      IN      A       10.53.0.80
 
 Перевірка, що сервер до zone-reload повертає стару адресу:
 ```text
-root@ns-cs-202-21:/# dig @10.53.1.1 www.cs-202-21.lab +norec +short
+root@ns-cs-202-16:/# dig @10.53.1.1 www.cs-202-16.lab +norec +short
 10.53.0.80
+```
+Залишок R = 25 с (12:23:30), час zone-reload — 12:23:30, перевірка на сервері:
+```text
+12:23:30  www.cs-202-16.lab.  25  IN  A  10.53.0.80
+zone-reload  -> 12:23:30
+root@ns-cs-202-16:/# dig @10.53.1.1 www.cs-202-16.lab +norec +short
+10.53.0.81
+```
+Очікуваний час появи нової адреси: 12:23:30 + 25 с = 12:23:55.
+
+Вивід циклу спостереження (перші два рядки, два останні рядки зі старою адресою, рядок з новою адресою):
+```text
+12:23:30 10.53.0.80
+12:23:32 10.53.0.80
+...
+12:23:55 10.53.0.80
+12:23:57 10.53.0.80
+12:24:00 10.53.0.81
+```
+Рядок server: з відповіді curl:
+```text
+server: web-b
+```
+| Час зміни | Очікуваний час | Спостережений час | Виміряна затримка, с | Прогноз, с |
+|---|---|---|---|---|
+| 12:23:30 | 12:23:55 | 12:24:00 | 30 | 25 |
+
+1. Чим пояснюється розбіжність між прогнозом і виміряним значенням?
+Розбіжність пояснюється мережевою затримкою, часом виконання самих команд (date, dig) та інтервалом сну в циклі sleep 2, що вносить похибку до 2 секунд.
+2. Якою була б найбільша можлива затримка для цього запису і за яких умов?
+Найбільша затримка дорівнює повному значенню базового $TTL (наприклад, 3600 с). Це сталося б, якби хтось запитав це ім'я через резолвер і воно закешувалося рівно за мілісекунду до виконання zone-reload.
+3. Як слід діяти, щоб перенести сервіс на нову адресу, якщо TTL запису становить 86 400 с?
+Потрібно заздалегідь (мінімум за 86 400 с, тобто 24 години) знизити TTL запису в зоні (наприклад, до 300 с). Дочекатися, поки запис зі старим великим TTL вимиється з усіх кешів світу. Лише після цього замінити IP-адресу на нову — клієнти побачать зміну максимум за 5 хвилин.
+## Завдання 5. Негативне кешування
+Прогноз (записати до вимірювання). Формула за RFC 2308 і розраховане значення: min(TTL SOA, minimum) = min(45, 30) = 30 с.
+
+Перевірка, що сервер до zone-reload повертає NXDOMAIN:
+```text
+; <<>> DiG 9.18.39-0ubuntu0.24.04.8-Ubuntu <<>> @10.53.1.1 new-hagpz.cs-202-16.lab +norec
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status:NXDOMAIN, id: 7205
+;; flags: qr aa; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: bd56d7ef9d6a895a010000006adf98beb5c28ac2736d7758 (good)
+;; QUESTION SECTION:
+;new-hagpz.cs-202-16.lab.       IN      A
+
+;; AUTHORITY SECTION:
+cs-202-16.lab.          45      IN      SOA     ns.cs-202-16.lab. admin.cs-202-16.lab. 2026110901 3600 600 86400 30
+
+;; Query time: 0 msec
+;; SERVER: 10.53.1.1#53(10.53.1.1) (UDP)
+;; WHEN: Tue Nov 10 12:45:00 UTC 2026
+;; MSG SIZE  rcvd: 125
+```
+Запит через resolver-a 12:43:58, час zone-reload 12:43:58, перевірка на сервері 10.53.0.80: date +%T & dig new-hagpz.cs-202-16.lab
+
+```text
+12:43:58
+
+; <<>> DiG 9.18.39-0ubuntu0.24.04.8-Ubuntu <<>> new-hagpz.cs-202-16.lab
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 18767
+;; flags: qr rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;new-hagpz.cs-202-16.lab.       IN      A
+
+;; AUTHORITY SECTION:
+cs-202-16.lab.          30      IN      SOA     ns.cs-202-16.lab. admin.cs-202-16.lab. 2026110901 3600 600 86400 30
+
+;; Query time: 1 msec
+;; SERVER: 10.53.0.53#53(10.53.0.53) (UDP)
+;; WHEN: Tue Nov 10 12:43:58 UTC 2026
+;; MSG SIZE  rcvd: 97
+```
+zone-reload & date +%T
+```text
+zone cs-202-16.lab/IN: loaded serial 2026110901
+OK
+zone reload queued
+12:45:18
+```
+dig @10.53.1.1 new-hagpz.cs-202-16.lab +norec +short
+```text
+10.53.0.80
+```
+Вивід циклу спостереження (перші два рядки, останній рядок з NXDOMAIN, перший рядок з NOERROR):
+```text
+12:46:19 NXDOMAIN
+12:46:21 NXDOMAIN
+...
+12:47:37 NXDOMAIN
+12:47:30 NOERROR
+```
+| Негативну відповідь закешовано | Запис створено | Ім'я резолвиться через resolver-a | Виміряно, с | Прогноз, с |
+|---|---|---|---|---|
+| 12:46:19 | 12:47:30 | 12:47:29 | 31 | 30 |
+
+1. Чому тривалість негативного кешування визначається записом SOA, а не записом, який запитували?
+Тому що запису, який запитували, не існує (про що свідчить NXDOMAIN), отже власного TTL він мати не може. SOA запис визначає глобальні параметри зони, звідки резолвер розуміє, наскільки довго можна вважати відсутність імені гарантованою.
+2. Чи збігається TTL запису SOA в секції AUTHORITY з TTL запису SOA у файлі зони? Поясніть.
+Не збігається. У файлі зони TTL запису SOA зазвичай великий. Але коли сервер повертає NXDOMAIN, він автоматично підставляє у секцію AUTHORITY запис SOA з розрахованим TTL для негативного кешування (як правило, це значення поля minimum), щоб резолвер знав, скільки часу кешувати саму відмову.
+3. Скрипт розгортання перевіряє ім'я сервісу до створення запису, а потім одразу після. Що він побачить і як це виправити?
+Скрипт побачить NXDOMAIN (відмову), оскільки резолвер закешував відсутність імені після першої перевірки. Виправити: або робити перевірку виключно ПІСЛЯ створення запису та оновлення зони, або налаштувати скрипт запитувати безпосередньо авторитативний сервер, оминаючи кеш.
+## Завдання 6. Затримка пошуку імені
+**Прогноз** (записати до вимірювання). До яких серверів звернеться resolver-a:
+
+| Ім'я | Перший запит | Повторний запит |
+|---|---|---|
+| A: нове ім'я у власній зоні | Власний авторитативний сервер | Кеш негативної відповіді resolver-a |
+| B: нове ім'я в зоні `lab.` | TLD-сервер 10.53.0.3 | Кеш resolver-a |
+| C: ім'я в неіснуючому TLD | root 10.53.0.2 | Кеш resolver-a |
+| D: `www.sNN.lab` після перезапуску резолвера | root → TLD → власний сервер | Кеш resolver-a |
+
+Вивід вимірювань: A=y$RANDOM.cs-202-16.lab; dig $A | grep 'Query time'; dig $A | grep 'Query time'
+```text
+;; Query time: 0 msec
+;; Query time: 0 msec
+```
+B=x$RANDOM.lab; dig $B | grep 'Query time'; dig $B | grep 'Query time'
+```text
+;; Query time: 42 msec
+;; Query time: 0 msec
+```
+C=x$RANDOM.zz$RANDOM; dig $C | grep 'Query time'; dig $C | grep 'Query time'
+```text
+;; Query time: 82 msec
+;; Query time: 0 msec
+```
+dig www.cs-202-16.lab | grep 'Query time' & dig www.cs-202-16.lab | grep 'Query time'
+```text
+;; Query time: 403 msec
+;; Query time: 0 msec
+```
+| Ім'я | Перший запит, мс | Повторний, мс | Сервери, до яких звернувся резолвер (за журналами) |
+|---|---|---|---|
+| A | 0 | 0 | auth |
+| B | 42 | 0 | TLD |
+| C | 82 | 0 | root |
+| D | 403 | 0 | root + TLD + auth |
+
+Значення `time_namelookup` з `curl` після перезапуску резолвера: 403.938 мс
+
+Фрагменти журналів запитів root, TLD і власного сервера для рядка D: docker compose -f stand/compose.yaml exec root tail -n 20 /var/log/named/queries.log
+```text
+10-Nov-2026 13:48:29.970 client @0x713b18006078 10.53.0.53#11173 (.): query: . IN NS -E(0)DC (10.53.0.2)
+10-Nov-2026 13:48:30.051 client @0x713b0c06ac88 10.53.0.53#27218 (a.root-servers.net): query: a.root-servers.net IN A -E(0)DC (10.53.0.2)
+10-Nov-2026 13:48:30.131 client @0x713b0c06ac88 10.53.0.53#59370 (ns.cs-202-16.lab): query: ns.cs-202-16.lab IN A -E(0)DC (10.53.0.2)
+10-Nov-2026 13:48:30.616 client @0x713b18006078 10.53.0.54#10142 (.): query: . IN NS -E(0)DC (10.53.0.2)
+10-Nov-2026 13:48:30.697 client @0x713b0c06ac88 10.53.0.54#35763 (a.root-servers.net): query: a.root-servers.net IN A -E(0)DC (10.53.0.2)
+10-Nov-2026 13:48:30.778 client @0x713b0c06ac88 10.53.0.54#35809 (ns.cs-202-16.lab): query: ns.cs-202-16.lab IN A -E(0)DC (10.53.0.2)
+10-Nov-2026 13:55:52.534 client @0x713b0c06ac88 10.53.0.53#57113 (x1104.zz26215): query: x1104.zz26215 IN A -E(0)DC (10.53.0.2)
+10-Nov-2026 13:56:41.383 client @0x713b0c06ac88 10.53.0.53#16154 (.): query: . IN NS -E(0)DC (10.53.0.2)
+10-Nov-2026 13:56:41.463 client @0x713b18006078 10.53.0.53#11478 (a.root-servers.net): query: a.root-servers.net IN A -E(0)DC (10.53.0.2)
+10-Nov-2026 13:56:41.544 client @0x713b18006078 10.53.0.53#18141 (www.cs-202-16.lab): query: www.cs-202-16.lab IN A -E(0)DC (10.53.0.2)
+10-Nov-2026 14:03:29.515 client @0x713b0c06ac88 10.53.0.53#14769 (.): query: . IN NS -E(0)DC (10.53.0.2)
+10-Nov-2026 14:03:29.595 client @0x713b0c06ac88 10.53.0.53#14565 (a.root-servers.net): query: a.root-servers.net IN A -E(0)DC (10.53.0.2)
+10-Nov-2026 14:03:29.676 client @0x713b0c06ac88 10.53.0.53#58052 (www.cs-202-16.lab): query: www.cs-202-16.lab IN AAAA -E(0)DC (10.53.0.2)
+10-Nov-2026 14:03:29.676 client @0x713b18006078 10.53.0.53#45087 (www.cs-202-16.lab): query: www.cs-202-16.lab IN A -E(0)DC (10.53.0.2)
+```
+docker compose -f stand/compose.yaml exec tld tail -n 20 /var/log/named/queries.log
+```text
+26-Oct-2026 17:48:30.252 client @0x738f0c06ac88 10.53.0.53#24233 (ns.cs-202-21.lab): query: ns.cs-202-21.lab IN A -E(0)DC (10.53.0.3)
+26-Oct-2026 17:48:30.899 client @0x738f0c06ac88 10.53.0.54#37647 (ns.cs-202-21.lab): query: ns.cs-202-21.lab IN A -E(0)DC (10.53.0.3)
+26-Oct-2026 17:51:25.354 client @0x738f0c06ac88 10.53.0.53#20297 (new2-kqjwe.cs-202-21.lab): query: new2-kqjwe.cs-202-21.lab IN A -E(0)DC (10.53.0.3)
+26-Oct-2026 18:32:46.676 client @0x738f04001ee8 10.53.0.53#19284 (x12099.lab): query: x12099.lab IN A -E(0)DC (10.53.0.3)
+26-Oct-2026 18:36:41.664 client @0x738f04001ee8 10.53.0.53#5899 (www.cs-202-21.lab): query: www.cs-202-21.lab IN A -E(0)DC (10.53.0.3)
+26-Oct-2026 18:43:29.796 client @0x738f0c06ac88 10.53.0.53#64853 (www.cs-202-21.lab): query: www.cs-202-21.lab IN A -E(0)DC (10.53.0.3)
+26-Oct-2026 18:43:29.796 client @0x738f04001ee8 10.53.0.53#7582 (www.cs-202-21.lab): query: www.cs-202-21.lab IN AAAA -E(0)DC (10.53.0.3)
 ```
